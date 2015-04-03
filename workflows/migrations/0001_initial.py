@@ -9,159 +9,159 @@ class Migration(SchemaMigration):
 
     def forwards(self, orm):
         # Adding model 'Workflow'
-        db.create_table(u'workflow_workflow', (
+        db.create_table(u'workflows_workflow', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('name', self.gf('django.db.models.fields.CharField')(unique=True, max_length=100)),
-            ('initial_state', self.gf('django.db.models.fields.related.ForeignKey')(blank=True, related_name='workflow_state', null=True, to=orm['workflow.State'])),
+            ('initial_state', self.gf('django.db.models.fields.related.ForeignKey')(blank=True, related_name='workflow_state', null=True, to=orm['workflows.State'])),
         ))
-        db.send_create_signal(u'workflow', ['Workflow'])
+        db.send_create_signal(u'workflows', ['Workflow'])
 
         # Adding model 'State'
-        db.create_table(u'workflow_state', (
+        db.create_table(u'workflows_state', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('name', self.gf('django.db.models.fields.CharField')(max_length=100)),
             ('alias', self.gf('django.db.models.fields.CharField')(max_length=100, null=True, blank=True)),
-            ('workflow', self.gf('django.db.models.fields.related.ForeignKey')(related_name='states', to=orm['workflow.Workflow'])),
+            ('workflow', self.gf('django.db.models.fields.related.ForeignKey')(related_name='states', to=orm['workflows.Workflow'])),
         ))
-        db.send_create_signal(u'workflow', ['State'])
+        db.send_create_signal(u'workflows', ['State'])
 
         # Adding M2M table for field transitions on 'State'
-        m2m_table_name = db.shorten_name(u'workflow_state_transitions')
+        m2m_table_name = db.shorten_name(u'workflows_state_transitions')
         db.create_table(m2m_table_name, (
             ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
-            ('state', models.ForeignKey(orm[u'workflow.state'], null=False)),
-            ('transition', models.ForeignKey(orm[u'workflow.transition'], null=False))
+            ('state', models.ForeignKey(orm[u'workflows.state'], null=False)),
+            ('transition', models.ForeignKey(orm[u'workflows.transition'], null=False))
         ))
         db.create_unique(m2m_table_name, ['state_id', 'transition_id'])
 
         # Adding model 'Transition'
-        db.create_table(u'workflow_transition', (
+        db.create_table(u'workflows_transition', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('name', self.gf('django.db.models.fields.CharField')(max_length=100)),
-            ('workflow', self.gf('django.db.models.fields.related.ForeignKey')(related_name='transitions', to=orm['workflow.Workflow'])),
-            ('destination', self.gf('django.db.models.fields.related.ForeignKey')(blank=True, related_name='destination_state', null=True, to=orm['workflow.State'])),
+            ('workflow', self.gf('django.db.models.fields.related.ForeignKey')(related_name='transitions', to=orm['workflows.Workflow'])),
+            ('destination', self.gf('django.db.models.fields.related.ForeignKey')(blank=True, related_name='destination_state', null=True, to=orm['workflows.State'])),
             ('condition', self.gf('django.db.models.fields.CharField')(max_length=100, blank=True)),
             ('permission', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['permissions.Permission'], null=True, blank=True)),
             ('description', self.gf('django.db.models.fields.CharField')(max_length=1000, null=True, blank=True)),
         ))
-        db.send_create_signal(u'workflow', ['Transition'])
+        db.send_create_signal(u'workflows', ['Transition'])
 
         # Adding model 'StateObjectRelation'
-        db.create_table(u'workflow_stateobjectrelation', (
+        db.create_table(u'workflows_stateobjectrelation', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('content_type', self.gf('django.db.models.fields.related.ForeignKey')(blank=True, related_name='state_object', null=True, to=orm['contenttypes.ContentType'])),
             ('content_id', self.gf('django.db.models.fields.PositiveIntegerField')(null=True, blank=True)),
-            ('state', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['workflow.State'])),
+            ('state', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['workflows.State'])),
         ))
-        db.send_create_signal(u'workflow', ['StateObjectRelation'])
+        db.send_create_signal(u'workflows', ['StateObjectRelation'])
 
         # Adding unique constraint on 'StateObjectRelation', fields ['content_type', 'content_id', 'state']
-        db.create_unique(u'workflow_stateobjectrelation', ['content_type_id', 'content_id', 'state_id'])
+        db.create_unique(u'workflows_stateobjectrelation', ['content_type_id', 'content_id', 'state_id'])
 
         # Adding model 'WorkflowObjectRelation'
-        db.create_table(u'workflow_workflowobjectrelation', (
+        db.create_table(u'workflows_workflowobjectrelation', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('content_type', self.gf('django.db.models.fields.related.ForeignKey')(blank=True, related_name='workflow_object', null=True, to=orm['contenttypes.ContentType'])),
             ('content_id', self.gf('django.db.models.fields.PositiveIntegerField')(null=True, blank=True)),
-            ('workflow', self.gf('django.db.models.fields.related.ForeignKey')(related_name='wors', to=orm['workflow.Workflow'])),
+            ('workflow', self.gf('django.db.models.fields.related.ForeignKey')(related_name='wors', to=orm['workflows.Workflow'])),
         ))
-        db.send_create_signal(u'workflow', ['WorkflowObjectRelation'])
+        db.send_create_signal(u'workflows', ['WorkflowObjectRelation'])
 
         # Adding unique constraint on 'WorkflowObjectRelation', fields ['content_type', 'content_id']
-        db.create_unique(u'workflow_workflowobjectrelation', ['content_type_id', 'content_id'])
+        db.create_unique(u'workflows_workflowobjectrelation', ['content_type_id', 'content_id'])
 
         # Adding model 'WorkflowModelRelation'
-        db.create_table(u'workflow_workflowmodelrelation', (
+        db.create_table(u'workflows_workflowmodelrelation', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('content_type', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['contenttypes.ContentType'], unique=True)),
-            ('workflow', self.gf('django.db.models.fields.related.ForeignKey')(related_name='wmrs', to=orm['workflow.Workflow'])),
+            ('workflow', self.gf('django.db.models.fields.related.ForeignKey')(related_name='wmrs', to=orm['workflows.Workflow'])),
         ))
-        db.send_create_signal(u'workflow', ['WorkflowModelRelation'])
+        db.send_create_signal(u'workflows', ['WorkflowModelRelation'])
 
         # Adding model 'WorkflowPermissionRelation'
-        db.create_table(u'workflow_workflowpermissionrelation', (
+        db.create_table(u'workflows_workflowpermissionrelation', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('workflow', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['workflow.Workflow'])),
+            ('workflow', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['workflows.Workflow'])),
             ('permission', self.gf('django.db.models.fields.related.ForeignKey')(related_name='permissions', to=orm['permissions.Permission'])),
         ))
-        db.send_create_signal(u'workflow', ['WorkflowPermissionRelation'])
+        db.send_create_signal(u'workflows', ['WorkflowPermissionRelation'])
 
         # Adding unique constraint on 'WorkflowPermissionRelation', fields ['workflow', 'permission']
-        db.create_unique(u'workflow_workflowpermissionrelation', ['workflow_id', 'permission_id'])
+        db.create_unique(u'workflows_workflowpermissionrelation', ['workflow_id', 'permission_id'])
 
         # Adding model 'StateInheritanceBlock'
-        db.create_table(u'workflow_stateinheritanceblock', (
+        db.create_table(u'workflows_stateinheritanceblock', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('state', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['workflow.State'])),
+            ('state', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['workflows.State'])),
             ('permission', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['permissions.Permission'])),
         ))
-        db.send_create_signal(u'workflow', ['StateInheritanceBlock'])
+        db.send_create_signal(u'workflows', ['StateInheritanceBlock'])
 
         # Adding model 'StatePermissionRelation'
-        db.create_table(u'workflow_statepermissionrelation', (
+        db.create_table(u'workflows_statepermissionrelation', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('state', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['workflow.State'])),
+            ('state', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['workflows.State'])),
             ('permission', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['permissions.Permission'])),
             ('role', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['permissions.Role'])),
         ))
-        db.send_create_signal(u'workflow', ['StatePermissionRelation'])
+        db.send_create_signal(u'workflows', ['StatePermissionRelation'])
 
         # Adding model 'WorkflowHistorical'
-        db.create_table(u'workflow_workflowhistorical', (
+        db.create_table(u'workflows_workflowhistorical', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('content_type', self.gf('django.db.models.fields.related.ForeignKey')(related_name='content_type_set_for_workflowhistorical', to=orm['contenttypes.ContentType'])),
             ('content_id', self.gf('django.db.models.fields.PositiveIntegerField')()),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'], null=True, blank=True)),
-            ('state', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['workflow.State'])),
-            ('transition', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['workflow.Transition'], null=True, blank=True)),
+            ('state', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['workflows.State'])),
+            ('transition', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['workflows.Transition'], null=True, blank=True)),
             ('update_at', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True, blank=True)),
             ('comment', self.gf('django.db.models.fields.TextField')(null=True, blank=True)),
         ))
-        db.send_create_signal(u'workflow', ['WorkflowHistorical'])
+        db.send_create_signal(u'workflows', ['WorkflowHistorical'])
 
 
     def backwards(self, orm):
         # Removing unique constraint on 'WorkflowPermissionRelation', fields ['workflow', 'permission']
-        db.delete_unique(u'workflow_workflowpermissionrelation', ['workflow_id', 'permission_id'])
+        db.delete_unique(u'workflows_workflowpermissionrelation', ['workflow_id', 'permission_id'])
 
         # Removing unique constraint on 'WorkflowObjectRelation', fields ['content_type', 'content_id']
-        db.delete_unique(u'workflow_workflowobjectrelation', ['content_type_id', 'content_id'])
+        db.delete_unique(u'workflows_workflowobjectrelation', ['content_type_id', 'content_id'])
 
         # Removing unique constraint on 'StateObjectRelation', fields ['content_type', 'content_id', 'state']
-        db.delete_unique(u'workflow_stateobjectrelation', ['content_type_id', 'content_id', 'state_id'])
+        db.delete_unique(u'workflows_stateobjectrelation', ['content_type_id', 'content_id', 'state_id'])
 
         # Deleting model 'Workflow'
-        db.delete_table(u'workflow_workflow')
+        db.delete_table(u'workflows_workflow')
 
         # Deleting model 'State'
-        db.delete_table(u'workflow_state')
+        db.delete_table(u'workflows_state')
 
         # Removing M2M table for field transitions on 'State'
-        db.delete_table(db.shorten_name(u'workflow_state_transitions'))
+        db.delete_table(db.shorten_name(u'workflows_state_transitions'))
 
         # Deleting model 'Transition'
-        db.delete_table(u'workflow_transition')
+        db.delete_table(u'workflows_transition')
 
         # Deleting model 'StateObjectRelation'
-        db.delete_table(u'workflow_stateobjectrelation')
+        db.delete_table(u'workflows_stateobjectrelation')
 
         # Deleting model 'WorkflowObjectRelation'
-        db.delete_table(u'workflow_workflowobjectrelation')
+        db.delete_table(u'workflows_workflowobjectrelation')
 
         # Deleting model 'WorkflowModelRelation'
-        db.delete_table(u'workflow_workflowmodelrelation')
+        db.delete_table(u'workflows_workflowmodelrelation')
 
         # Deleting model 'WorkflowPermissionRelation'
-        db.delete_table(u'workflow_workflowpermissionrelation')
+        db.delete_table(u'workflows_workflowpermissionrelation')
 
         # Deleting model 'StateInheritanceBlock'
-        db.delete_table(u'workflow_stateinheritanceblock')
+        db.delete_table(u'workflows_stateinheritanceblock')
 
         # Deleting model 'StatePermissionRelation'
-        db.delete_table(u'workflow_statepermissionrelation')
+        db.delete_table(u'workflows_statepermissionrelation')
 
         # Deleting model 'WorkflowHistorical'
-        db.delete_table(u'workflow_workflowhistorical')
+        db.delete_table(u'workflows_workflowhistorical')
 
 
     models = {
@@ -213,80 +213,80 @@ class Migration(SchemaMigration):
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'name': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '100'})
         },
-        u'workflow.state': {
+        u'workflows.state': {
             'Meta': {'ordering': "('name',)", 'object_name': 'State'},
             'alias': ('django.db.models.fields.CharField', [], {'max_length': '100', 'null': 'True', 'blank': 'True'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
-            'transitions': ('django.db.models.fields.related.ManyToManyField', [], {'blank': 'True', 'related_name': "'states'", 'null': 'True', 'symmetrical': 'False', 'to': u"orm['workflow.Transition']"}),
-            'workflow': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'states'", 'to': u"orm['workflow.Workflow']"})
+            'transitions': ('django.db.models.fields.related.ManyToManyField', [], {'blank': 'True', 'related_name': "'states'", 'null': 'True', 'symmetrical': 'False', 'to': u"orm['workflows.Transition']"}),
+            'workflow': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'states'", 'to': u"orm['workflows.Workflow']"})
         },
-        u'workflow.stateinheritanceblock': {
+        u'workflows.stateinheritanceblock': {
             'Meta': {'object_name': 'StateInheritanceBlock'},
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'permission': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['permissions.Permission']"}),
-            'state': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['workflow.State']"})
+            'state': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['workflows.State']"})
         },
-        u'workflow.stateobjectrelation': {
+        u'workflows.stateobjectrelation': {
             'Meta': {'unique_together': "(('content_type', 'content_id', 'state'),)", 'object_name': 'StateObjectRelation'},
             'content_id': ('django.db.models.fields.PositiveIntegerField', [], {'null': 'True', 'blank': 'True'}),
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'blank': 'True', 'related_name': "'state_object'", 'null': 'True', 'to': u"orm['contenttypes.ContentType']"}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'state': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['workflow.State']"})
+            'state': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['workflows.State']"})
         },
-        u'workflow.statepermissionrelation': {
+        u'workflows.statepermissionrelation': {
             'Meta': {'object_name': 'StatePermissionRelation'},
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'permission': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['permissions.Permission']"}),
             'role': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['permissions.Role']"}),
-            'state': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['workflow.State']"})
+            'state': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['workflows.State']"})
         },
-        u'workflow.transition': {
+        u'workflows.transition': {
             'Meta': {'object_name': 'Transition'},
             'condition': ('django.db.models.fields.CharField', [], {'max_length': '100', 'blank': 'True'}),
             'description': ('django.db.models.fields.CharField', [], {'max_length': '1000', 'null': 'True', 'blank': 'True'}),
-            'destination': ('django.db.models.fields.related.ForeignKey', [], {'blank': 'True', 'related_name': "'destination_state'", 'null': 'True', 'to': u"orm['workflow.State']"}),
+            'destination': ('django.db.models.fields.related.ForeignKey', [], {'blank': 'True', 'related_name': "'destination_state'", 'null': 'True', 'to': u"orm['workflows.State']"}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
             'permission': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['permissions.Permission']", 'null': 'True', 'blank': 'True'}),
-            'workflow': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'transitions'", 'to': u"orm['workflow.Workflow']"})
+            'workflow': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'transitions'", 'to': u"orm['workflows.Workflow']"})
         },
-        u'workflow.workflow': {
+        u'workflows.workflow': {
             'Meta': {'object_name': 'Workflow'},
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'initial_state': ('django.db.models.fields.related.ForeignKey', [], {'blank': 'True', 'related_name': "'workflow_state'", 'null': 'True', 'to': u"orm['workflow.State']"}),
+            'initial_state': ('django.db.models.fields.related.ForeignKey', [], {'blank': 'True', 'related_name': "'workflow_state'", 'null': 'True', 'to': u"orm['workflows.State']"}),
             'name': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '100'}),
-            'permissions': ('django.db.models.fields.related.ManyToManyField', [], {'to': u"orm['permissions.Permission']", 'through': u"orm['workflow.WorkflowPermissionRelation']", 'symmetrical': 'False'})
+            'permissions': ('django.db.models.fields.related.ManyToManyField', [], {'to': u"orm['permissions.Permission']", 'through': u"orm['workflows.WorkflowPermissionRelation']", 'symmetrical': 'False'})
         },
-        u'workflow.workflowhistorical': {
+        u'workflows.workflowhistorical': {
             'Meta': {'object_name': 'WorkflowHistorical'},
             'comment': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'}),
             'content_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'content_type_set_for_workflowhistorical'", 'to': u"orm['contenttypes.ContentType']"}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'state': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['workflow.State']"}),
-            'transition': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['workflow.Transition']", 'null': 'True', 'blank': 'True'}),
+            'state': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['workflows.State']"}),
+            'transition': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['workflows.Transition']", 'null': 'True', 'blank': 'True'}),
             'update_at': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['auth.User']", 'null': 'True', 'blank': 'True'})
         },
-        u'workflow.workflowmodelrelation': {
+        u'workflows.workflowmodelrelation': {
             'Meta': {'object_name': 'WorkflowModelRelation'},
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['contenttypes.ContentType']", 'unique': 'True'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'workflow': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'wmrs'", 'to': u"orm['workflow.Workflow']"})
+            'workflow': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'wmrs'", 'to': u"orm['workflows.Workflow']"})
         },
-        u'workflow.workflowobjectrelation': {
+        u'workflows.workflowobjectrelation': {
             'Meta': {'unique_together': "(('content_type', 'content_id'),)", 'object_name': 'WorkflowObjectRelation'},
             'content_id': ('django.db.models.fields.PositiveIntegerField', [], {'null': 'True', 'blank': 'True'}),
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'blank': 'True', 'related_name': "'workflow_object'", 'null': 'True', 'to': u"orm['contenttypes.ContentType']"}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'workflow': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'wors'", 'to': u"orm['workflow.Workflow']"})
+            'workflow': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'wors'", 'to': u"orm['workflows.Workflow']"})
         },
-        u'workflow.workflowpermissionrelation': {
+        u'workflows.workflowpermissionrelation': {
             'Meta': {'unique_together': "(('workflow', 'permission'),)", 'object_name': 'WorkflowPermissionRelation'},
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'permission': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'permissions'", 'to': u"orm['permissions.Permission']"}),
-            'workflow': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['workflow.Workflow']"})
+            'workflow': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['workflows.Workflow']"})
         }
     }
 

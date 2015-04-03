@@ -10,7 +10,7 @@ setup(
     include_package_data=True,
     zip_safe=False,
     description="A workflow solution for django applications, based on django-workflows core.",
-    install_requires=['Django>=1.6.1', 'django-permissions==1.0.3', 'South==0.8.4'],
+    install_requires=['Django>=1.6.1', 'django-permissions==1.0.3'],
     classifiers=[
         "Programming Language :: Python",
         "Programming Language :: Python :: 2.6",

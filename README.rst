@@ -6,6 +6,12 @@ A workflow solution for django applications, based on django-workflows core.
 
 Changelog
 =========
+0.1.4
+-----
+
+Natural keys implementation for Workflow.
+
+
 0.1.0
 -----
 

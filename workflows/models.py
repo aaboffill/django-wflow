@@ -14,6 +14,12 @@ from permissions.models import Permission
 from permissions.models import Role
 
 
+class WorkflowManager(models.Manager):
+
+    def get_by_natural_key(self, name):
+        return self.get(name=name)
+
+
 class Workflow(models.Model):
     """A workflow consists of a sequence of connected (through transitions)
     states. It can be assigned to a model and / or model instances. If a
@@ -41,9 +47,14 @@ class Workflow(models.Model):
     name = models.CharField(_(u"Name"), max_length=100, unique=True)
     initial_state = models.ForeignKey("State", related_name="workflow_state", blank=True, null=True)
     permissions = models.ManyToManyField(Permission, symmetrical=False, through="WorkflowPermissionRelation")
+    objects = WorkflowManager()
 
     def __unicode__(self):
         return self.name
+
+    def natural_key(self):
+        return self.name
+
 
     def get_initial_state(self):
         """Returns the initial state of the workflow. Takes the first one if

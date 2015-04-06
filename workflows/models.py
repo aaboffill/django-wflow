@@ -53,7 +53,7 @@ class Workflow(models.Model):
         return self.name
 
     def natural_key(self):
-        return self.name
+        return self.name,
 
 
     def get_initial_state(self):

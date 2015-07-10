@@ -33,7 +33,8 @@ class WorkflowBase(object):
             return workflow
 
         workflow = utils.get_workflow(self)
-        cache.set(key, workflow)
+        if workflow:
+            cache.set(key, workflow)
         return workflow
 
     def remove_workflow(self):
@@ -90,6 +91,12 @@ class WorkflowBase(object):
     def do_transition(self, transition, user, comment=None):
         """Processes the passed transition (if allowed).
         """
+        if not isinstance(transition, Transition):
+            try:
+                transition = Transition.objects.get(name=transition, workflow=self.get_workflow(obj))
+            except Transition.DoesNotExist:
+                return False
+
         success = utils.do_transition(self, transition, user)
         if success:
             # update current state
@@ -215,8 +222,7 @@ def get_or_create_workflow(model):
 
         if not workflow:
             workflows_settings = getattr(settings, 'WORKFLOWS', {})
-            model_path = "%s.%s" % (model.__module__, model.__name__)
-            wf_item = workflows_settings.get(model_path, None)
+            wf_item = workflows_settings.get("%s.%s" % (model.__module__, model.__name__), None)
 
             try:
                 wf_name = wf_item['name']

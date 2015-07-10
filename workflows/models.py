@@ -173,6 +173,7 @@ class State(models.Model):
 
     class Meta:
         ordering = ("name", )
+        unique_together = ('name', 'workflow')
 
     def __unicode__(self):
         return "%s (%s)" % (self.alias if self.alias else self.name, self.workflow.name)
@@ -236,6 +237,9 @@ class Transition(models.Model):
 
     def __unicode__(self):
         return self.name
+
+    class Meta:
+        unique_together = ('name', 'workflow')
 
 
 class StateObjectRelation(models.Model):

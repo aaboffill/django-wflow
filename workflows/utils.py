@@ -16,8 +16,6 @@ from .models import WorkflowObjectRelation
 import permissions.utils
 from permissions.models import ObjectPermission
 
-WORKFLOWS = getattr(settings, 'WORKFLOWS', {})
-
 
 def get_objects_for_workflow(workflow):
     """Returns all objects which have passed workflow.
@@ -197,8 +195,8 @@ def get_workflow(obj):
     if workflow is not None:
         return workflow
 
-    ctype = ContentType.objects.get_for_model(obj)
-    return get_workflow_for_model(ctype)
+    from . import get_or_create_workflow
+    return get_or_create_workflow(obj.__class__)
 
 
 def get_workflow_for_object(obj):
@@ -308,12 +306,6 @@ def get_allowed_transitions(obj, user):
 def do_transition(obj, transition, user):
     """Processes the passed transition to the passed object (if allowed).
     """
-    if not isinstance(transition, Transition):
-        try:
-            transition = Transition.objects.get(name=transition)
-        except Transition.DoesNotExist:
-            return False
-
     transitions = get_allowed_transitions(obj, user)
     if transition in transitions:
         set_state(obj, transition.destination)
@@ -329,7 +321,8 @@ def update_permissions(obj):
     workflow = get_workflow(obj)
     model_path = "%s.%s" % (obj.__class__.__module__, obj.__class__.__name__)
     # finding workflow settings
-    workflow_dict = WORKFLOWS.get(model_path, None)
+    workflows = getattr(settings, 'WORKFLOWS', {})
+    workflow_dict = workflows.get(model_path, None)
 
     if workflow_dict:
         state = get_state(obj)

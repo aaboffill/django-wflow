@@ -6,6 +6,11 @@ A workflow solution for django applications, based on django-workflows core.
 
 Changelog
 =========
+0.1.6
+-----
+
+Fix some details to run successfully using unit test.
+
 0.1.5
 -----
 

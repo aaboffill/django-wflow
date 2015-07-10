@@ -93,7 +93,7 @@ class WorkflowBase(object):
         """
         if not isinstance(transition, Transition):
             try:
-                transition = Transition.objects.get(name=transition, workflow=self.get_workflow(obj))
+                transition = Transition.objects.get(name=transition, workflow=self.get_workflow())
             except Transition.DoesNotExist:
                 return False
 

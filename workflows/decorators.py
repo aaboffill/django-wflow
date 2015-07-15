@@ -31,6 +31,19 @@ def create_state_method(state_name):
     return state_method
 
 
+def create_manager_state_method(state_name):
+    def manager_state_method(self):
+        queryset_method = getattr(self.get_queryset(), state_name.lower(), None)
+        return queryset_method() if queryset_method else self.get_queryset()
+    return manager_state_method
+
+
+def create_queryset_state_method(state_name):
+    def queryset_state_method(self):
+        return self.filter(current_state__name=state_name)
+    return queryset_state_method
+
+
 def workflow_enabled(cls):
 
     if models.Model not in cls.__mro__:
@@ -66,22 +79,66 @@ def workflow_enabled(cls):
         if not cls_transition_method:
             setattr(cls, method_name, create_transition_method(name, condition))
 
+    class CustomQuerySetMixin(object):
+        pass
+
+    class CustomManagerMixin(object):
+
+        def get_queryset(self):
+            return CustomQuerySetMixin(self.model, using=self._db)
+
+    cls._default_manager = CustomManagerMixin()
+
     # building state methods
     initial_state = get_wf_dict_value(wf_item, 'initial_state', wf_name)
     initial_state_name = get_wf_dict_value(initial_state, 'name', wf_name, 'initial_state')
-    method_name = "is_%s" % initial_state_name.lower().replace(' ', '_')
-    # building method
-    cls_state_method = getattr(cls, method_name, None)
-    if not cls_state_method:
-        setattr(cls, method_name, property(create_state_method(initial_state_name)))
+    # building instance method
+    instance_method_name = "is_%s" % initial_state_name.lower().replace(' ', '_')
+    cls_instance_method = getattr(cls, instance_method_name, None)
+    if not cls_instance_method:
+        setattr(cls, instance_method_name, property(create_state_method(initial_state_name)))
+
+    # building manager method
+    manager_method_name = "%s" % initial_state_name.lower().replace(' ', '_')
+    cls_manager_method = getattr(CustomManagerMixin, manager_method_name, None)
+    if not cls_manager_method:
+        setattr(CustomManagerMixin, manager_method_name, create_manager_state_method(initial_state_name))
+    cls_queryset_method = getattr(CustomQuerySetMixin, manager_method_name, None)
+    if not cls_queryset_method:
+        setattr(CustomQuerySetMixin, manager_method_name, create_queryset_state_method(initial_state_name))
 
     states = get_wf_dict_value(wf_item, 'states', wf_name)
     for state in states:
         state_name = get_wf_dict_value(state, 'name', wf_name, 'states')
-        method_name = "is_%s" % state_name.lower().replace(' ', '_')
         # building method
+        method_name = "is_%s" % state_name.lower().replace(' ', '_')
         cls_state_method = getattr(cls, method_name, None)
         if not cls_state_method:
             setattr(cls, method_name, property(create_state_method(state_name)))
+
+        # building manager method
+        manager_method_name = "%s" % state_name.lower().replace(' ', '_')
+        cls_manager_method = getattr(CustomManagerMixin, manager_method_name, None)
+        if not cls_manager_method:
+            setattr(CustomManagerMixin, manager_method_name, create_manager_state_method(state_name))
+        cls_queryset_method = getattr(CustomQuerySetMixin, manager_method_name, None)
+        if not cls_queryset_method:
+            setattr(CustomQuerySetMixin, manager_method_name, create_queryset_state_method(state_name))
+
+    # extending manager
+    cls._meta.concrete_managers.sort()
+    managers = [(mgr_name, manager) for order, mgr_name, manager in cls._meta.concrete_managers]
+    setattr(cls, '_default_manager', None)  # clean the default manager
+    setattr(cls._meta, 'concrete_managers', [])  # clean the managers
+    for mgr_name, manager in managers:
+        class ExtendedManager(CustomManagerMixin, manager.__class__):
+
+            class ExtendedQuerySet(CustomQuerySetMixin, manager.get_queryset().__class__):
+                pass
+
+            def get_queryset(self):
+                return self.ExtendedQuerySet(self.model, using=self._db)
+
+        cls.add_to_class(mgr_name, ExtendedManager())
 
     return cls

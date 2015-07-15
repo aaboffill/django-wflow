@@ -219,125 +219,127 @@ def get_or_create_workflow(model):
     """
     try:
         workflow = utils.get_workflow_for_model(ContentType.objects.get_for_model(model))
+    except Exception as e:
+        return None
 
-        if not workflow:
-            workflows_settings = getattr(settings, 'WORKFLOWS', {})
-            wf_item = workflows_settings.get("%s.%s" % (model.__module__, model.__name__), None)
+    if not workflow:
+        workflows_settings = getattr(settings, 'WORKFLOWS', {})
+        wf_item = workflows_settings.get("%s.%s" % (model.__module__, model.__name__), None)
 
-            try:
-                wf_name = wf_item['name']
+        if not wf_item:
+            return None
 
-                # ROLES
-                dict_roles = {}
-                roles = get_wf_dict_value(wf_item, 'roles', wf_name)
-                for role in roles:
-                    dict_roles[role] = perm_utils.register_role(name=role)
+        try:
+            wf_name = wf_item['name']
 
-                # PERMISSIONS
-                dict_permissions = {}
-                permissions = get_wf_dict_value(wf_item, 'permissions', wf_name)
+            # ROLES
+            dict_roles = {}
+            roles = get_wf_dict_value(wf_item, 'roles', wf_name)
+            for role in roles:
+                dict_roles[role] = perm_utils.register_role(name=role)
 
-                for permission in permissions:
-                    perm_name = get_wf_dict_value(permission, 'name', 'permissions', wf_name)
-                    perm_codename = get_wf_dict_value(permission, 'codename', 'permissions', wf_name)
+            # PERMISSIONS
+            dict_permissions = {}
+            permissions = get_wf_dict_value(wf_item, 'permissions', wf_name)
 
-                    dict_permissions[perm_codename] = perm_utils.register_permission(
-                        name=perm_name,
-                        codename=perm_codename
+            for permission in permissions:
+                perm_name = get_wf_dict_value(permission, 'name', 'permissions', wf_name)
+                perm_codename = get_wf_dict_value(permission, 'codename', 'permissions', wf_name)
+
+                dict_permissions[perm_codename] = perm_utils.register_permission(
+                    name=perm_name,
+                    codename=perm_codename
+                )
+                # the permission registration returned False if the permission already exists
+                if not dict_permissions[perm_codename]:
+                    dict_permissions[perm_codename] = Permission.objects.get(name=perm_name, codename=perm_codename)
+
+            # creating workflow
+            workflow = Workflow.objects.create(name=wf_name)
+            # setting model
+            workflow.set_to_model(ContentType.objects.get_for_model(model))
+
+            dict_states = {}
+            # INITIAL STATE
+            initial_state = get_wf_dict_value(wf_item, 'initial_state', wf_name)
+            initial_state_name = get_wf_dict_value(initial_state, 'name', wf_name, 'initial_state')
+            initial_state_alias = initial_state.get('alias', None)
+
+            wf_initial_state = State.objects.create(name=initial_state_name, alias=initial_state_alias, workflow=workflow)
+            dict_states[initial_state_name] = wf_initial_state
+            # sets and save the initial state
+            workflow.initial_state = wf_initial_state
+            workflow.save()
+
+            state_perm_relations = initial_state.get('state_perm_relation', False)
+            # if [True] creates the State Permission Relation
+            if state_perm_relations:
+                for state_perm_relation in state_perm_relations:
+                    role = get_wf_dict_value(state_perm_relation, 'role', wf_name, 'state_perm_relation')
+                    permission = get_wf_dict_value(state_perm_relation, 'permission', wf_name, 'state_perm_relation')
+                    StatePermissionRelation.objects.get_or_create(
+                        state=wf_initial_state,
+                        role=get_wf_dict_value(dict_roles, role, wf_name, 'dict_roles'),
+                        permission=get_wf_dict_value(dict_permissions, permission, wf_name, 'dict_permissions')
                     )
-                    # the permission registration returned False if the permission already exists
-                    if not dict_permissions[perm_codename]:
-                        dict_permissions[perm_codename] = Permission.objects.get(name=perm_name, codename=perm_codename)
 
-                # creating workflow
-                workflow = Workflow.objects.create(name=wf_name)
-                # setting model
-                workflow.set_to_model(ContentType.objects.get_for_model(model))
+            # STATES
+            states = get_wf_dict_value(wf_item, 'states', wf_name)
+            for state in states:
+                state_name = get_wf_dict_value(state, 'name', wf_name, 'states')
+                state_alias = state.get('alias', None)
 
-                dict_states = {}
-                # INITIAL STATE
-                initial_state = get_wf_dict_value(wf_item, 'initial_state', wf_name)
-                initial_state_name = get_wf_dict_value(initial_state, 'name', wf_name, 'initial_state')
-                initial_state_alias = initial_state.get('alias', None)
+                wf_state = State.objects.create(name=state_name, alias=state_alias, workflow=workflow)
+                dict_states[state_name] = wf_state
 
-                wf_initial_state = State.objects.create(name=initial_state_name, alias=initial_state_alias, workflow=workflow)
-                dict_states[initial_state_name] = wf_initial_state
-                # sets and save the initial state
-                workflow.initial_state = wf_initial_state
-                workflow.save()
-
-                state_perm_relations = initial_state.get('state_perm_relation', False)
+                state_perm_relations = state.get('state_perm_relation', False)
                 # if [True] creates the State Permission Relation
                 if state_perm_relations:
                     for state_perm_relation in state_perm_relations:
                         role = get_wf_dict_value(state_perm_relation, 'role', wf_name, 'state_perm_relation')
                         permission = get_wf_dict_value(state_perm_relation, 'permission', wf_name, 'state_perm_relation')
                         StatePermissionRelation.objects.get_or_create(
-                            state=wf_initial_state,
+                            state=wf_state,
                             role=get_wf_dict_value(dict_roles, role, wf_name, 'dict_roles'),
                             permission=get_wf_dict_value(dict_permissions, permission, wf_name, 'dict_permissions')
                         )
 
-                # STATES
-                states = get_wf_dict_value(wf_item, 'states', wf_name)
-                for state in states:
-                    state_name = get_wf_dict_value(state, 'name', wf_name, 'states')
-                    state_alias = state.get('alias', None)
+            # creating the Workflow Permission Relation
+            for wf_permission in dict_permissions.itervalues():
+                WorkflowPermissionRelation.objects.get_or_create(workflow=workflow, permission=wf_permission)
 
-                    wf_state = State.objects.create(name=state_name, alias=state_alias, workflow=workflow)
-                    dict_states[state_name] = wf_state
+            # TRANSITIONS
+            dict_transitions = {}
+            transitions = get_wf_dict_value(wf_item, 'transitions', wf_name)
+            for transition in transitions:
+                name = get_wf_dict_value(transition, 'name', wf_name, 'transitions')
+                destination = get_wf_dict_value(transition, 'destination', wf_name, 'transitions')
+                permission = get_wf_dict_value(transition, 'permission', wf_name, 'transitions')
 
-                    state_perm_relations = state.get('state_perm_relation', False)
-                    # if [True] creates the State Permission Relation
-                    if state_perm_relations:
-                        for state_perm_relation in state_perm_relations:
-                            role = get_wf_dict_value(state_perm_relation, 'role', wf_name, 'state_perm_relation')
-                            permission = get_wf_dict_value(state_perm_relation, 'permission', wf_name, 'state_perm_relation')
-                            StatePermissionRelation.objects.get_or_create(
-                                state=wf_state,
-                                role=get_wf_dict_value(dict_roles, role, wf_name, 'dict_roles'),
-                                permission=get_wf_dict_value(dict_permissions, permission, wf_name, 'dict_permissions')
-                            )
+                wf_transition, created = Transition.objects.get_or_create(
+                    name=name,
+                    workflow=workflow,
+                    destination=get_wf_dict_value(dict_states, destination, wf_name, 'dict_states'),
+                    permission=get_wf_dict_value(dict_permissions, permission, wf_name, 'dict_permissions'),
+                    description=get_wf_dict_value(transition, 'description', wf_name, 'transitions'),
+                    condition=transition.get('condition', ''),
+                )
 
-                # creating the Workflow Permission Relation
-                for wf_permission in dict_permissions.itervalues():
-                    WorkflowPermissionRelation.objects.get_or_create(workflow=workflow, permission=wf_permission)
+                dict_transitions[name] = wf_transition
 
-                # TRANSITIONS
-                dict_transitions = {}
-                transitions = get_wf_dict_value(wf_item, 'transitions', wf_name)
-                for transition in transitions:
-                    name = get_wf_dict_value(transition, 'name', wf_name, 'transitions')
-                    destination = get_wf_dict_value(transition, 'destination', wf_name, 'transitions')
-                    permission = get_wf_dict_value(transition, 'permission', wf_name, 'transitions')
+            # CREATING THE STATE TRANSITIONS RELATION
+            state_transitions = get_wf_dict_value(wf_item, 'state_transitions', wf_name)
+            for state_name, transitions in state_transitions.items():
+                state = get_wf_dict_value(dict_states, state_name, wf_name, 'dict_states')
 
-                    wf_transition, created = Transition.objects.get_or_create(
-                        name=name,
-                        workflow=workflow,
-                        destination=get_wf_dict_value(dict_states, destination, wf_name, 'dict_states'),
-                        permission=get_wf_dict_value(dict_permissions, permission, wf_name, 'dict_permissions'),
-                        description=get_wf_dict_value(transition, 'description', wf_name, 'transitions'),
-                        condition=transition.get('condition', ''),
-                    )
+                for transition_name in transitions:
+                    transition = get_wf_dict_value(dict_transitions, transition_name, wf_name, 'dict_transitions')
+                    state.transitions.add(transition)
 
-                    dict_transitions[name] = wf_transition
+        except KeyError:
+            raise ImproperlyConfigured('The attribute or key (name), must be specified in the workflow configuration.')
 
-                # CREATING THE STATE TRANSITIONS RELATION
-                state_transitions = get_wf_dict_value(wf_item, 'state_transitions', wf_name)
-                for state_name, transitions in state_transitions.items():
-                    state = get_wf_dict_value(dict_states, state_name, wf_name, 'dict_states')
-
-                    for transition_name in transitions:
-                        transition = get_wf_dict_value(dict_transitions, transition_name, wf_name, 'dict_transitions')
-                        state.transitions.add(transition)
-
-            except KeyError:
-                raise ImproperlyConfigured('The attribute or key (name), must be specified in the workflow configuration.')
-
-        return workflow
-
-    except:
-        return None
+    return workflow
 
 
 def get_wf_dict_value(dictionary, key, wf_name, parent_name=None):

@@ -6,6 +6,13 @@ A workflow solution for django applications, based on django-workflows core.
 
 Changelog
 =========
+0.1.8
+-----
+
+Added convenient methods to workflow enabled models managers, to filter instances by specific current state.
+Added test application.
+
+
 0.1.7
 -----
 
@@ -190,3 +197,27 @@ Usage
     workflows = getattr(settings, 'WORKFLOWS', {})
     workflows.update(WORKFLOWS)
     setattr(settings, 'WORKFLOWS', workflows)
+
+6. Workflow facilities:
+    For each model workflow, convenient methods are automatically added.
+    + Transitions
+        - You can execute each transition using the transition name:
+            Example:
+            instance.do_make_public(user, comment): For a transition named "Make public"
+
+        - Each transition method called by the transition name, as explained above, will call a checker method if this method exist.
+          In this method you can check anything and the transition method will be executed if this method exist and returns True. If the
+          checker method does not exit, then, the transition method will be executed normally.
+            Example:
+            check_make_public() : Is called, if exist, when the method do_make_public(user, comment) is executed.
+
+    + Current State
+        - You can ask if the instance workflow has an specific state, using the state name:
+            Example:
+            is_public() : For an state named "Public"
+
+    + Managers
+        - Convenient methods are added to workflow enabled models managers, to filter instances by specific current state.
+            Example:
+            Publication.objects.public(): return all Publication instances with a current state of "Public"
+            (Assuming that Publication is workflow enabled model)

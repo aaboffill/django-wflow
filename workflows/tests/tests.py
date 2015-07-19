@@ -551,6 +551,84 @@ class WorkflowManagerTestCase(TestCase):
         self.assertEqual(Publication.objects.private().count(), 4)
 
 
+class WorkflowCheckerMethodsTestCase(TestCase):
+
+    def setUp(self):
+        self.publication = create_publication()
+        self.user = self.publication.owner
+
+        self.private = State.objects.get(name="Private")
+        self.public = State.objects.get(name="Public")
+
+        def check_make_public_method_false(user):
+            return False
+        self.check_make_public_false = check_make_public_method_false
+
+        def check_make_public_method_true(user):
+            return True
+        self.check_make_public_true = check_make_public_method_true
+
+        def check_make_private_method_false(user):
+            return False
+        self.check_make_private_false = check_make_private_method_false
+
+        def check_make_private_method_true(user):
+            return True
+        self.check_make_private_true = check_make_private_method_true
+
+        def check_conditional_method_false(user):
+            return False
+        self.check_condition_false = check_conditional_method_false
+
+        def check_conditional_method_true(user):
+            return True
+        self.check_condition_true = check_conditional_method_true
+
+    def test_checker_methods(self):
+        setattr(self.publication, 'check_make_public', self.check_make_public_false)
+        self.publication.do_make_public(self.user)
+        self.assertEqual(self.publication.current_state, self.private)
+
+        setattr(self.publication, 'check_make_public', self.check_make_public_true)
+        setattr(self.publication, 'another_make_public_check', self.check_condition_false)
+        self.publication.do_make_public(self.user)
+        self.assertEqual(self.publication.current_state, self.private)
+
+        setattr(self.publication, 'check_make_public', self.check_make_public_true)
+        setattr(self.publication, 'another_make_public_check', self.check_condition_true)
+        self.publication.do_make_public(self.user)
+        self.assertEqual(self.publication.current_state, self.public)
+
+        setattr(self.publication, 'check_make_private', self.check_make_private_false)
+        self.publication.do_make_private(self.user)
+        self.assertEqual(self.publication.current_state, self.public)
+
+        setattr(self.publication, 'check_make_private', self.check_make_private_true)
+        setattr(self.publication, 'another_make_private_check', self.check_condition_false)
+        self.publication.do_make_private(self.user)
+        self.assertEqual(self.publication.current_state, self.public)
+
+        setattr(self.publication, 'check_make_private', self.check_make_private_true)
+        setattr(self.publication, 'another_make_private_check', self.check_condition_true)
+        self.publication.do_make_private(self.user)
+        self.assertEqual(self.publication.current_state, self.private)
+
+
+class WorkflowClassMethodsTestCase(TestCase):
+
+    def setUp(self):
+        self.publication = create_publication()
+
+    def test_classmethods(self):
+        self.assertEqual(Publication.workflow(), self.publication.get_workflow())
+
+        self.assertEqual(set(Publication.states()).difference(self.publication.get_workflow().states.all()), set([]))
+
+        self.assertEqual(set(Publication.final_states()).difference(self.publication.get_workflow().states.filter(transitions=None)), set([]))
+
+        self.assertEqual(set(Publication.active_states()).difference(self.publication.get_workflow().states.exclude(transitions=None)), set([]))
+
+
 # Helpers ####################################################################
 
 def create_publication():

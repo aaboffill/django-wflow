@@ -15,7 +15,7 @@ def create_transition_method(transition_name, transition_condition=''):
         # specific conditional method
         condition_method = getattr(self, transition_condition, None)
 
-        checked = (not checker or checker() is True) and (not condition_method or condition_method() is True)
+        checked = (not checker or checker(user) is True) and (not condition_method or condition_method(user) is True)
 
         return self.do_transition(transition_name, user, comment) if checked else checked
     return transition_method

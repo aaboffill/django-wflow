@@ -23,6 +23,22 @@ class WorkflowBase(object):
     """Mixin class to make objects workflow aware.
     """
 
+    @classmethod
+    def workflow(cls):
+        return utils.get_workflow_for_model(ContentType.objects.get_for_model(cls))
+
+    @classmethod
+    def states(cls):
+        return cls.workflow().states.all()
+
+    @classmethod
+    def final_states(cls):
+        return cls.states().filter(transitions=None)
+
+    @classmethod
+    def active_states(cls):
+        return cls.states().exclude(transitions=None)
+
     def get_workflow(self):
         """Returns the current workflow of the object.
         """

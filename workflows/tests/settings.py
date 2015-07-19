@@ -69,12 +69,14 @@ WORKFLOWS = {
                 'destination': 'Public',
                 'permission': 'edit',
                 'description': 'Make Public Transition',
+                'condition': 'another_make_public_check',
             },
             {
                 'name': 'Make private',
                 'destination': 'Private',
                 'permission': 'view',
                 'description': 'Make Private Transition',
+                'condition': 'another_make_private_check',
             },
         ],
         'state_transitions': {

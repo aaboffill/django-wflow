@@ -6,6 +6,12 @@ A workflow solution for django applications, based on django-workflows core.
 
 Changelog
 =========
+0.1.9
+-----
+
+Added a param (user) to the transition check methods.
+Added useful classmethods to the workflow class.
+
 0.1.8
 -----
 

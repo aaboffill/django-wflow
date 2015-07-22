@@ -216,7 +216,6 @@ class WorkflowBase(object):
 
 # django imports
 from django.core.exceptions import ImproperlyConfigured
-from django.utils.module_loading import import_by_path
 from django.db.transaction import atomic
 
 # workflow imports
@@ -252,7 +251,7 @@ def get_or_create_workflow(model):
             dict_roles = {}
             roles = get_wf_dict_value(wf_item, 'roles', wf_name)
             for role in roles:
-                dict_roles[role] = perm_utils.register_role(name=role)
+                dict_roles[role], created = Role.objects.get_or_create(name=role)
 
             # PERMISSIONS
             dict_permissions = {}

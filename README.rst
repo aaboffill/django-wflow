@@ -6,6 +6,11 @@ A workflow solution for django applications, based on django-workflows core.
 
 Changelog
 =========
+0.1.11
+-----
+
+Fixed WorkflowBase class.
+
 0.1.10
 -----
 

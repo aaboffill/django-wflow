@@ -25,7 +25,7 @@ class WorkflowBase(object):
 
     @classmethod
     def workflow(cls):
-        return utils.get_workflow_for_model(ContentType.objects.get_for_model(cls))
+        return get_or_create_workflow(cls)
 
     @classmethod
     def states(cls):

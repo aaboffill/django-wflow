@@ -54,8 +54,9 @@ def workflow_enabled(cls):
         bases.insert(0, WorkflowBase)
         cls.__bases__ = tuple(bases)
 
-    current_state = models.ForeignKey(State, verbose_name=_(u"State"), name='current_state', null=True, blank=True)
-    current_state.contribute_to_class(cls=cls, name='current_state')
+        current_state = models.ForeignKey(State, verbose_name=_(u"State"), name='current_state', null=True, blank=True)
+        current_state.contribute_to_class(cls=cls, name='current_state')
+
 
     get_or_create_workflow(cls)
 

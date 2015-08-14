@@ -6,6 +6,11 @@ A workflow solution for django applications, based on django-workflows core.
 
 Changelog
 =========
+0.1.12
+-----
+
+Adding current_state attribute to the workflow class, only if this attribute is not created.
+
 0.1.11
 -----
 

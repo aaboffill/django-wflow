@@ -3,7 +3,9 @@ from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
-from workflows import WorkflowBase, State, get_or_create_workflow, get_wf_dict_value
+
+from models import WorkflowBase, State
+from utils import get_or_create_workflow, get_wf_dict_value
 
 
 def create_transition_method(transition_name, transition_condition=''):

@@ -1,17 +1,18 @@
 # coding=utf-8
-from django.contrib.auth.models import User
-
+import inspect
+from collections import Iterable
+from django.conf import settings
+from django.contrib.auth.models import User, Group
 from django.db import models
-
-# django imports
+from django.core.cache import cache
 from django.contrib.contenttypes import generic
 from django.contrib.contenttypes.models import ContentType
 from django.utils.translation import ugettext_lazy as _
 
-# permissions imports
 import permissions.utils
-from permissions.models import Permission
-from permissions.models import Role
+from permissions.models import Permission, Role
+
+import utils
 
 
 class WorkflowManager(models.Manager):
@@ -450,3 +451,210 @@ class WorkflowHistorical(models.Model):
     comment = models.TextField(_(u"User comment"), null=True, blank=True)
 
     objects = WorkflowHistoricalManager()
+
+
+class WorkflowBase(models.Model):
+    """Mixin class to make objects workflow aware.
+    """
+
+    class Meta(object):
+        abstract = True
+
+    @classmethod
+    def workflow(cls):
+        return utils.get_or_create_workflow(cls)
+
+    @classmethod
+    def states(cls):
+        return cls.workflow().states.all()
+
+    @classmethod
+    def final_states(cls):
+        return cls.states().filter(transitions=None)
+
+    @classmethod
+    def active_states(cls):
+        return cls.states().exclude(transitions=None)
+
+    def get_workflow(self):
+        """Returns the current workflow of the object.
+        """
+        # build cache key
+        key = ("%s_%s" % (self.__class__.__name__, "WORKFLOW")).upper()
+        workflow = cache.get(key)
+        if workflow is not None:
+            return workflow
+
+        workflow = utils.get_workflow(self)
+        if workflow:
+            cache.set(key, workflow)
+        return workflow
+
+    def remove_workflow(self):
+        """Removes the workflow from the object. After this function has been
+        called the object has no *own* workflow anymore (it might have one via
+        its content type).
+
+        """
+        return utils.remove_workflow_from_object(self)
+
+    def set_workflow(self, workflow):
+        """Sets the passed workflow to the object. This will set the local
+        workflow for the object.
+
+        If the object has already the given workflow nothing happens.
+        Otherwise the object gets the passed workflow and the state is set to
+        the workflow's initial state.
+
+        **Parameters:**
+
+        workflow
+            The workflow which should be set to the object. Can be a Workflow
+            instance or a string with the workflow name.
+        obj
+            The object which gets the passed workflow.
+        """
+        return utils.set_workflow_for_object(self, workflow)
+
+    def get_state(self):
+        """Returns the current workflow state of the object.
+        """
+        return utils.get_state(self)
+
+    def get_state_name(self):
+        """Returns the current workflow state name of the object.
+        """
+        return str(utils.get_state(self))
+
+    def set_state(self, state):
+        """Sets the workflow state of the object.
+        """
+        return utils.set_state(self, state)
+
+    def set_initial_state(self):
+        """Sets the initial state of the current workflow to the object.
+        """
+        return self.set_state(self.get_workflow().initial_state)
+
+    def get_allowed_transitions(self, user):
+        """Returns allowed transitions for the current state.
+        """
+        return utils.get_allowed_transitions(self, user)
+
+    def do_transition(self, transition, user, comment=None):
+        """Processes the passed transition (if allowed).
+        """
+        if not isinstance(transition, Transition):
+            try:
+                transition = Transition.objects.get(name=transition, workflow=self.get_workflow())
+            except Transition.DoesNotExist:
+                return False
+
+        success = utils.do_transition(self, transition, user)
+        if success:
+            # update current state
+            self.current_state = transition.destination
+            self.save()
+
+            # save history
+            WorkflowHistorical.objects.create(
+                content_type=self.get_content_type(),
+                content_id=self.pk,
+                state=transition.destination,
+                transition=transition,
+                user=user,
+                comment=comment
+            )
+        return success
+
+    def save(self, force_insert=False, force_update=False, using=None, update_fields=None, comment=u"", user=None):
+        """
+        Overriding the model save method in order to save the initial history workflow
+        """
+        new_instance = True if not self.pk else False
+        if new_instance:
+            self.current_state = self.get_workflow().initial_state
+
+        models.Model.save(self, force_insert, force_update, using, update_fields)
+
+        if new_instance and self.pk:
+            self.set_initial_state()
+            # save history
+            WorkflowHistorical.objects.create(
+                content_type=self.get_content_type(),
+                content_id=self.pk,
+                state=self.current_state,
+                user=user,
+                comment=comment
+            )
+
+        # fix user roles
+        self.fix_user_roles()
+
+    def get_content_type(self):
+        """
+        Returns self content type
+        """
+        # build cache key
+        key = ("%s_%s" % (self.__class__.__name__, "C_TYPE")).upper()
+        content_type = cache.get(key)
+        if content_type is not None:
+            return content_type
+
+        content_type = ContentType.objects.get_for_model(self)
+        cache.set(key, content_type)
+        return content_type
+
+    def fix_user_roles(self):
+        """
+        Fix the user roles with self instance defined in the workflow settings
+        """
+        workflows = getattr(settings, 'WORKFLOWS', {})
+        wf_name = self.get_workflow().name
+        model_path = "%s.%s" % (self.__class__.__module__, self.__class__.__name__)
+        # finding workflow settings
+        wf_item = workflows.get(model_path, None)
+        if wf_item:
+            user_roles = utils.get_wf_dict_value(wf_item, 'user_roles', wf_name)
+            for user_role in user_roles:
+                user_path = utils.get_wf_dict_value(user_role, 'user_path', wf_name, 'user_roles')
+                role = utils.get_wf_dict_value(user_role, 'role', wf_name, 'user_roles')
+
+                attributes = user_path.split('.')
+                target = self
+                for attr in attributes:
+                    try:
+                        target = getattr(target, attr)
+                    except AttributeError:
+                        target = None
+                        break
+                else:
+                    if not target:
+                        continue  # go to the next user_role
+
+                if inspect.ismethod(target):
+                    target = target()
+
+                # add (user or group) role relation
+                if isinstance(target, Iterable):
+                    for item in target:
+                        self._add_user_group_role(item, Role.objects.get(name=role))
+                else:
+                    self._add_user_group_role(target, Role.objects.get(name=role))
+
+    def _add_user_group_role(self, target, role):
+        if isinstance(target, User) or isinstance(target, Group):
+            permissions.utils.add_local_role(self, target, role)
+        else:
+            raise TypeError('Expected a django User or Group instance.')
+
+    def history(self, recent_first=True):
+        versions = WorkflowHistorical.objects.get_history_from_object_query_set(self)
+        if recent_first:
+            versions = versions.order_by('-update_at')
+        else:
+            versions = versions.order_by('update_at')
+        return (version for version in versions)
+
+    def reverse_history(self):
+        return self.history(recent_first=False)

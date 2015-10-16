@@ -5,7 +5,7 @@ from django import template
 
 # workflows imports
 from ..utils import get_allowed_transitions, get_state
-from workflows import WorkflowBase
+from workflows.models import WorkflowBase
 
 register = template.Library()
 

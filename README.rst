@@ -6,6 +6,11 @@ A workflow solution for django applications, based on django-workflows core.
 
 Changelog
 =========
+0.1.14
+-----
+
+Fixed importing error.
+
 0.1.13
 -----
 

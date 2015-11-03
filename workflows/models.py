@@ -466,7 +466,10 @@ class WorkflowBase(models.Model):
 
     @classmethod
     def states(cls):
-        return cls.workflow().states.all()
+        try:
+            return cls.workflow().states.all()
+        except:
+            return State.objects.none()
 
     @classmethod
     def final_states(cls):

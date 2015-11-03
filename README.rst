@@ -6,6 +6,11 @@ A workflow solution for django applications, based on django-workflows core.
 
 Changelog
 =========
+0.1.15
+-----
+
+Returning a default value for WorkflowBase ``states`` method.
+
 0.1.14
 -----
 

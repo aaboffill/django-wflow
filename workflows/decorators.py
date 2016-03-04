@@ -5,7 +5,7 @@ from django.db import models
 from django.utils.translation import ugettext_lazy as _
 
 from models import WorkflowBase, State
-from utils import get_or_create_workflow, get_wf_dict_value
+from utils import get_wf_dict_value
 
 
 def create_transition_method(transition_name, transition_condition=''):
@@ -46,6 +46,17 @@ def create_queryset_state_method(state_name):
     return queryset_state_method
 
 
+def create_manager_get_queryset_method(manager, queryset_mixin):
+    def manager_get_queryset_method(self):
+        queryset_class = manager.get_queryset().__class__
+
+        class ExtendedQuerySet(queryset_mixin, queryset_class):
+            pass
+
+        return ExtendedQuerySet(self.model, using=self._db)
+    return manager_get_queryset_method
+
+
 def workflow_enabled(cls):
 
     if models.Model not in cls.__mro__:
@@ -59,8 +70,6 @@ def workflow_enabled(cls):
         current_state = models.ForeignKey(State, verbose_name=_(u"State"), name='current_state', null=True, blank=True)
         current_state.contribute_to_class(cls=cls, name='current_state')
 
-
-    get_or_create_workflow(cls)
 
     workflows_settings = getattr(settings, 'WORKFLOWS', {})
     wf_item = workflows_settings.get("%s.%s" % (cls.__module__, cls.__name__), None)
@@ -135,13 +144,9 @@ def workflow_enabled(cls):
     setattr(cls._meta, 'concrete_managers', [])  # clean the managers
     for mgr_name, manager in managers:
         class ExtendedManager(CustomManagerMixin, manager.__class__):
+            pass
 
-            class ExtendedQuerySet(CustomQuerySetMixin, manager.get_queryset().__class__):
-                pass
-
-            def get_queryset(self):
-                return self.ExtendedQuerySet(self.model, using=self._db)
-
+        setattr(ExtendedManager, 'get_queryset', create_manager_get_queryset_method(manager, CustomQuerySetMixin))
         cls.add_to_class(mgr_name, ExtendedManager())
 
     return cls

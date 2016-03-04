@@ -6,6 +6,11 @@ A workflow solution for django applications, based on django-workflows core.
 
 Changelog
 =========
+0.2.0
+-----
+
+Changed workflow implementation to avoid load django models in the decorator's declaration.
+
 0.1.15
 -----
 

@@ -5,7 +5,7 @@ setup(
     #url="http://github.com/aaboffill/django-wflow/",
     author="Adonys Alea Boffill",
     author_email="aaboffill@gmail.com",
-    version="0.2.0",
+    version="0.2.1",
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,

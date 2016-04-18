@@ -1,5 +1,7 @@
 # coding=utf-8
+import logging
 import inspect
+import utils
 from collections import Iterable
 from django.conf import settings
 from django.contrib.auth.models import User, Group
@@ -12,7 +14,7 @@ from django.utils.translation import ugettext_lazy as _
 import permissions.utils
 from permissions.models import Permission, Role
 
-import utils
+logger = logging.getLogger(__name__)
 
 
 class WorkflowManager(models.Manager):
@@ -578,21 +580,26 @@ class WorkflowBase(models.Model):
         if new_instance:
             self.current_state = self.get_workflow().initial_state
 
-        models.Model.save(self, force_insert, force_update, using, update_fields)
+        try:
+            models.Model.save(self, force_insert, force_update, using, update_fields)
+        except Exception as e:
+            logger.error("WORKFLOW: Logging exception while the model %s is saved." % self.__class__)
+            logger.error(e.message)
+        finally:
+            if self.pk:
+                if new_instance:
+                    self.set_initial_state()
+                    # save history
+                    WorkflowHistorical.objects.create(
+                        content_type=self.get_content_type(),
+                        content_id=self.pk,
+                        state=self.current_state,
+                        user=user,
+                        comment=comment
+                    )
 
-        if new_instance and self.pk:
-            self.set_initial_state()
-            # save history
-            WorkflowHistorical.objects.create(
-                content_type=self.get_content_type(),
-                content_id=self.pk,
-                state=self.current_state,
-                user=user,
-                comment=comment
-            )
-
-        # fix user roles
-        self.fix_user_roles()
+                # fix user roles
+                self.fix_user_roles()
 
     def get_content_type(self):
         """

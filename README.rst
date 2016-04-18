@@ -6,6 +6,11 @@ A workflow solution for django applications, based on django-workflows core.
 
 Changelog
 =========
+0.2.1
+-----
+
+Fixed workflow model save method, capturing possible errors when the model is saved.
+
 0.2.0
 -----
 

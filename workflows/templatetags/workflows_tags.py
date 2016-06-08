@@ -18,7 +18,7 @@ def transitions(context, obj):
     
     return {
         "transitions": get_allowed_transitions(obj, request.user),
-        "state": get_state(obj),
+        "state": obj.current_state or get_state(obj),
     }
 
 @register.assignment_tag

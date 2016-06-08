@@ -184,22 +184,41 @@ class State(models.Model):
     def get_allowed_transitions(self, obj, user):
         """Returns all allowed transitions for passed object and user.
         """
-        transitions = []
-        for transition in self.transitions.all():
-            permission = transition.permission
-            if permission is None:
-                transitions.append(transition)
-            else:
-                # First we try to get the objects specific has_permission
-                # method (in case the object inherits from the PermissionBase
-                # class).
-                try:
-                    if obj.has_permission(user, permission.codename):
-                        transitions.append(transition)
-                except AttributeError:
-                    if permissions.utils.has_permission(obj, user, permission.codename):
-                        transitions.append(transition)
-        return transitions
+        from django.db.models.query import Q
+        from django.contrib.contenttypes.models import ContentType
+        ctype = ContentType.objects.get_for_model(obj)
+
+        roles = Role.objects.filter(
+            Q (
+                principalrolerelation__user=user,
+                principalrolerelation__content_type=None,
+                principalrolerelation__content_id=None
+            ) |
+            Q (
+                principalrolerelation__group__user=user,
+                principalrolerelation__content_type=None,
+                principalrolerelation__content_id=None
+            ) |
+            Q (
+                principalrolerelation__user=user,
+                principalrolerelation__content_type=ctype,
+                principalrolerelation__content_id=obj.id
+            ) |
+            Q (
+                principalrolerelation__group__user=user,
+                principalrolerelation__content_type=ctype,
+                principalrolerelation__content_id=obj.id
+            )
+        ).distinct()
+
+        return self.transitions.filter(
+            Q (permission=None) |
+            Q (
+                permission__objectpermission__content_type=ctype,
+                permission__objectpermission__content_id=obj.id,
+                permission__objectpermission__role__in=roles
+            )
+        ).distinct()
 
 
 class Transition(models.Model):
@@ -336,8 +355,8 @@ class WorkflowPermissionRelation(models.Model):
         The permission for which the workflow is responsible. Needs to be a
         Permission instance.
     """
-    workflow = models.ForeignKey(Workflow)
-    permission = models.ForeignKey(Permission, related_name="permissions")
+    workflow = models.ForeignKey(Workflow, related_name="workflow_permissions")
+    permission = models.ForeignKey(Permission, related_name="workflow_permissions")
 
     class Meta:
         unique_together = ("workflow", "permission")
@@ -383,9 +402,9 @@ class StatePermissionRelation(models.Model):
         The role for which the state has the permission. Needs to be a lfc
         Role instance.
     """
-    state = models.ForeignKey(State, verbose_name=_(u"State"))
-    permission = models.ForeignKey(Permission, verbose_name=_(u"Permission"))
-    role = models.ForeignKey(Role, verbose_name=_(u"Role"))
+    state = models.ForeignKey(State, verbose_name=_(u"State"), related_name='state_permissions')
+    permission = models.ForeignKey(Permission, verbose_name=_(u"Permission"), related_name='state_permissions')
+    role = models.ForeignKey(Role, verbose_name=_(u"Role"), related_name='state_permissions')
 
     def __unicode__(self):
         return "%s %s %s" % (self.state.name, self.role.name, self.permission.name)
@@ -524,12 +543,12 @@ class WorkflowBase(models.Model):
     def get_state(self):
         """Returns the current workflow state of the object.
         """
-        return utils.get_state(self)
+        return self.current_state or utils.get_state(self)
 
     def get_state_name(self):
         """Returns the current workflow state name of the object.
         """
-        return str(utils.get_state(self))
+        return str(self.current_state or utils.get_state(self))
 
     def set_state(self, state):
         """Sets the workflow state of the object.

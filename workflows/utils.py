@@ -459,7 +459,7 @@ def get_allowed_transitions(obj, user):
     user
         The user for which the transitions are allowed.
     """
-    state = get_state(obj)
+    state = obj.current_state or get_state(obj)
     if state is None:
         return []
 
@@ -490,7 +490,7 @@ def update_permissions(obj):
     workflow_dict = workflows.get(model_path, None)
 
     if workflow_dict:
-        state = get_state(obj)
+        state = obj.current_state or get_state(obj)
         ct = ContentType.objects.get_for_model(obj)
         roles = workflow_dict['roles']
 
@@ -499,7 +499,7 @@ def update_permissions(obj):
             role__name__in=roles,
             content_type=ct,
             content_id=obj.id,
-            permission__permissions__workflow=workflow
+            permission__workflow_permissions__workflow=workflow
         ).delete()
 
         # Grant permission for the state

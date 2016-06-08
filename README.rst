@@ -6,6 +6,11 @@ A workflow solution for django applications, based on django-workflows core.
 
 Changelog
 =========
+0.2.2
+-----
+
+Optimized method to get the allowed transitions.
+
 0.2.1
 -----
 
